@@ -1,0 +1,115 @@
+# Artix Linux Install (UEFI + OpenRC + Syslinux + Pipewire + X + DWM)
+# Disk: /dev/nvme0n1 — Wipe Entire Disk
+
+## 1. Boot into Artix live ISO
+
+## 2. Connect to Wi-Fi
+wifi-menu
+ping -c 3 archlinux.org
+
+## 3. Partition Disk
+fdisk /dev/nvme0n1
+
+g                               # New GPT table
+n -> ENTER -> ENTER -> +1G      # EFI partition
+t -> 1                          # Select EFI partition
+1                               # Type EFI (code 1)
+
+n -> ENTER -> ENTER -> +32G     # Root partition
+n -> ENTER -> ENTER -> ENTER    # Home partition
+w                               # Write changes
+
+## 4. Format Partitions
+mkfs.fat -F32 /dev/nvme0n1p1
+mkfs.ext4 /dev/nvme0n1p2
+mkfs.ext4 /dev/nvme0n1p3
+
+## 5. Mount Partitions
+mount /dev/nvme0n1p2 /mnt
+mkdir /mnt/boot
+mount /dev/nvme0n1p1 /mnt/boot
+mkdir /mnt/home
+mount /dev/nvme0n1p3 /mnt/home
+
+## 6. Update Mirrorlist (optional but recommended)
+pacman -Sy
+
+## 7. Install Base System
+pacstrap /mnt base base-devel linux linux-firmware openrc elogind dbus networkmanager syslinux xorg xorg-xinit pipewire wireplumber pulseaudio-alsa
+
+## 8. Generate fstab
+genfstab -U /mnt >> /mnt/etc/fstab
+
+## 9. Enter Chroot
+artix-chroot /mnt /bin/bash
+
+## 10. Timezone & Locale
+ln -sf /usr/share/zoneinfo/Africa/Johannesburg /etc/localtime
+hwclock --systohc
+
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+locale-gen
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+export LANG=en_US.UTF-8
+
+## 11. Hostname & Hosts File
+echo "artixpc" > /etc/hostname
+cat >> /etc/hosts <<EOF
+127.0.0.1    localhost
+::1          localhost
+127.0.1.1    artixpc.localdomain artixpc
+EOF
+
+## 12. Enable OpenRC Services
+rc-update add dbus default
+rc-update add elogind default
+rc-update add NetworkManager default
+rc-update add pipewire default
+rc-update add wireplumber default
+
+## 13. Install & Configure Syslinux
+syslinux-install_update -i -a -m
+
+# Configure /boot/syslinux/syslinux.cfg
+blkid /dev/nvme0n1p2  # Copy PARTUUID for root
+# Example:
+cat > /boot/syslinux/syslinux.cfg <<EOF
+UI menu.c32
+PROMPT 0
+MENU TITLE Artix Linux
+TIMEOUT 50
+
+LABEL artix
+  MENU LABEL Artix Linux
+  LINUX ../vmlinuz-linux
+  INITRD ../initramfs-linux.img
+  APPEND root=PARTUUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx rw
+EOF
+
+## 14. Set Root Password
+passwd
+
+## 15. Create User "c0mrade"
+useradd -m -G wheel,audio,video,optical,storage -s /bin/bash c0mrade
+passwd c0mrade
+
+# Enable sudo
+pacman -S sudo
+EDITOR=nano visudo
+# Uncomment: %wheel ALL=(ALL) ALL
+
+## 16. Install X and DWM
+pacman -S xorg-server xorg-xinit xterm git base-devel
+
+cd /usr/local/src
+git clone https://git.suckless.org/dwm
+cd dwm
+make clean install
+
+echo "exec dwm" > /home/c0mrade/.xinitrc
+chown c0mrade:c0mrade /home/c0mrade/.xinitrc
+
+## 17. Exit and Reboot
+exit
+umount -R /mnt
+reboot
