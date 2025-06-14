@@ -1,0 +1,68 @@
+Hi ChatGPT! I’m working on theming my Hyprland setup with Wallust. Here’s what I’ve done so far and what I need help with next:
+What I have done / set up:
+
+    Installed Wallust and created the main config file ~/.config/wallust/wallust.toml with entries like:
+
+backend = "kmeans"
+
+[[entry]]
+template = "waybar.css"
+target = "~/.config/waybar/colors.css"
+
+[[entry]]
+template = "kitty.conf"
+target = "~/.config/kitty/colors.conf"
+
+[[entry]]
+template = "gtk.css"
+target = "~/.config/gtk-3.0/gtk.css"
+
+[[entry]]
+template = "wofi.css"
+target = "~/.config/wofi/style.css"
+
+[[entry]]
+template = "nvim.vim"
+target = "~/.config/nvim/colors/wallust.vim"
+
+    Created the corresponding template files in ~/.config/wallust/templates/ with placeholders like {background}, {foreground}, {color0}, etc. For example, waybar.css with color variables used in the CSS.
+
+    Updated my real config files to reference the Wallust-generated files:
+
+        Kitty config includes colors.conf
+
+        Waybar launched with -s ~/.config/waybar/colors.css
+
+        GTK apps pick up ~/.config/gtk-3.0/gtk.css
+
+        Wofi launched with --style ~/.config/wofi/style.css
+
+        Neovim loads colorscheme wallust from generated vim file
+
+    Created a script to automate wallpaper changing and theming:
+
+#!/bin/bash
+
+wallpaper="$1"
+
+swww img "$wallpaper" --transition-type any --transition-duration 2
+wallust "$wallpaper"
+
+killall -q waybar
+waybar -c ~/.config/waybar/config -s ~/.config/waybar/colors.css &
+kitty @ set-colors -a ~/.config/kitty/colors.conf
+# Add GTK reload or other commands as needed
+
+What I want help with now:
+
+    Confirm best practices for managing these configs — should I keep my existing Waybar or Kitty configs mostly unchanged and just point them to Wallust-generated files?
+
+    How to handle Firefox theming dynamically (or best alternatives)?
+
+    Any tips to automate this better on wallpaper change?
+
+    Help with integrating random wallpapers and reapplying themes automatically
+
+    Generate missing template files for apps I use (like kitty, waybar, wofi, nvim, gtk)
+
+Thanks! Please guide me through the next steps or provide any scripts or configs I might need.
